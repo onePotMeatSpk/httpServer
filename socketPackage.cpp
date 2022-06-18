@@ -83,8 +83,6 @@ locationCloseAgain:
 		//被信号打断
  		else if(errno == EINTR)
 			goto locationCloseAgain;
-		else
-			;
   	}
 
   	return ret;
@@ -264,8 +262,6 @@ locationSendAgain:
 		//else if(errno == ECONNRESET)
       	//	goto locationSendAgain;
     	//否则，报错退出
-    	else
-      		;
   	}
 
   	return numSend;

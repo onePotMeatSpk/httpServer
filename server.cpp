@@ -55,6 +55,13 @@ const char* getReasonPhrase(int statusCode);
 //Return : 0.
 int main(int argc, char* argv[])
 {
+	//忽略SIGPIPE信号
+	//因为在服务器发送文件时的几次write的间隙之间，对端有可能close连接（我水平太低，想不通为什么对端会关闭连接，但他就是会）
+	//这样write就会出错，并发出SIGPIPE信号
+	//而SIGPIPE信号的默认处理方式，是kill掉当前进程！！！那么就会导致程序直接崩掉（血泪教训！！！）
+	//所以需要忽略SIGPIPE信号
+	signal(SIGPIPE, SIG_IGN);
+
 	//更改工作路径
 	int ret = chdir("../resource/");
 	if(ret == -1)
@@ -541,15 +548,6 @@ void sendFile(int connectFd, const char* fileName)
 	//循环读取文件内容，直到读完
 	while((numRead = Read(fileFd, bufFile, sizeof(bufFile))) > 0)
 	{
-//		//将文件内容发送
-//		int numSend = Send(connectFd, bufFile, numRead, 0);
-//		//如果numSend为-1，因为EAGAIN和EINTR都已经在Send()内部处理，所以传出的一定是其他错误
-//		//所以此处需要对错误进行处理，如果此处不做处理，会导致程序崩溃
-//		//但是为什么，会崩溃呢？？？？
-//		if(numSend == -1)
-//			break;
-
-
 		//发送读到的文件内容（采取分包发送的策略）
 		int numAlreadySend = 0;//已发送的数据量
 		int numSend = 0;//某次调用write所发数据量
