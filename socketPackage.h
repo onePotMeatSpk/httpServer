@@ -16,6 +16,8 @@
 #include <fcntl.h>
 #include <sys/un.h>
 #include <stddef.h>
+#include <dirent.h>
+
 using namespace std;
 
 #ifndef _SOCKETPACKAGE_

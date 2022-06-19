@@ -37,10 +37,15 @@ int getLine(int fd, char *buf, int size);
 void disconnect(int connectFd, ReactorEvent* ev);
 void dealWithGETRequest(int connectFd, const char* fileName);
 void sendError(int connectFd, int errorNo);
+void sendDir(int connectFd, const char* dirName);
+const char* makeHyperLink(const char* originalPart, const char* newPart);
+
 void sendRespondHead(int connectFd, int statusCode, const char* reasonPhrase, const char* type, int len);
 void sendFile(int connectFd, const char* fileName);
 const char* getFileType(const char* fileName);
 const char* getReasonPhrase(int statusCode);
+
+
 
 
 
@@ -391,7 +396,14 @@ void recvMessageWork(int connectFd, int events, void* arg)
 	if(strncasecmp(method, "GET", 3) == 0)
 	{
 		//得到URL路径
-		char* fileName = path + 1;
+		const char* fileName;
+		//如果请求的是目录
+		if(strcmp(path, "/") == 0)
+			fileName = ".";
+		//如果请求的是常规文件
+		else
+			fileName = path + 1;
+		
 
 		//处理http请求
 		dealWithGETRequest(connectFd, fileName);
@@ -433,14 +445,9 @@ void dealWithGETRequest(int connectFd, const char* fileName)
 	
 	//如果请求的资源不存在，则回复404
 	if(ret == -1)
-	{ 
 		sendError(connectFd, 404);
-		return;
-	}
-
-
 	//如果该资源是普通文件，则可以将该文件的内容直接回复
-	if(S_ISREG(stateFile.st_mode))
+	else if(S_ISREG(stateFile.st_mode))
 	{
 		//回复HTTP响应首部
 		sendRespondHead(connectFd, 200, getReasonPhrase(200), getFileType(fileName), stateFile.st_size);
@@ -448,9 +455,12 @@ void dealWithGETRequest(int connectFd, const char* fileName)
 		//回复文件内容
 		sendFile(connectFd, fileName);		
 	}
-	//如果该资源是目录文件，则………………
+	//如果该资源是目录文件，则发送含有该目录中所有目录项的超链接和大小信息的HTML
 	else
-	{}
+	{
+		sendDir(connectFd, fileName);
+		return;
+	}
 }
 
 
@@ -461,9 +471,7 @@ void dealWithGETRequest(int connectFd, const char* fileName)
 //Return: void
 void sendError(int connectFd, int errorNo)
 {
-	
-
-	//制作错误响应报文的报文体
+	//制作报文体
 	char bufErrorHTML[BUF_LEN] = {0};
 	sprintf(bufErrorHTML + strlen(bufErrorHTML), "<html>\n");
 	
@@ -479,15 +487,66 @@ void sendError(int connectFd, int errorNo)
 	sprintf(bufErrorHTML + strlen(bufErrorHTML), "</html>\n");
 
 
-	//发送错误响应报文的首部
+	//发送错报文首部
 	sendRespondHead(connectFd, errorNo, getReasonPhrase(errorNo), "text/html", strlen(bufErrorHTML));
 
-	//发送错误响应报文的报文体
+	//发送报文体
 	Send(connectFd, bufErrorHTML, strlen(bufErrorHTML), 0);
-	
-	printf("%s", bufErrorHTML);
 }
 
+
+
+//Summary:发送HTTP目录文件响应报文
+//Parameters:
+//		connectFd:某连接的句柄
+//		errorNo：错误号
+//Return: void
+void sendDir(int connectFd, const char* dirName)
+{
+	//提取目录中的目录项信息
+	struct dirent** direntList;
+	int numDirent = scandir(dirName, &direntList, NULL, alphasort);
+	
+	//制作报文体
+	char bufDirHTML[BUF_LEN] = {0};
+	sprintf(bufDirHTML + strlen(bufDirHTML), "<html>\n");
+	
+	sprintf(bufDirHTML + strlen(bufDirHTML), "<head>\n");
+	sprintf(bufDirHTML + strlen(bufDirHTML), "<title>%d %s</title>\n", 200, getReasonPhrase(200));
+	sprintf(bufDirHTML + strlen(bufDirHTML), "</head>\n");
+	
+	sprintf(bufDirHTML + strlen(bufDirHTML), "<body>\n");
+	sprintf(bufDirHTML + strlen(bufDirHTML), "<table width=\"500\">\n");
+	for(int i = 0; i < numDirent; i++)
+	{
+		//制作超链接（此处并没有调用makeHyperLink）
+		
+		//制作报文
+		sprintf(bufDirHTML + strlen(bufDirHTML), "<tr><td><a href=\"%s/%s\">%s</a></td></tr>\n", dirName, direntList[i]->d_name, direntList[i]->d_name);
+	}
+	sprintf(bufDirHTML + strlen(bufDirHTML), "</body>\n");
+	
+	sprintf(bufDirHTML + strlen(bufDirHTML), "</html>\n");
+
+	//发送报文首部
+	sendRespondHead(connectFd, 200, getReasonPhrase(200), "text/html", strlen(bufDirHTML));
+
+	//发送报文体
+	Send(connectFd, bufDirHTML, strlen(bufDirHTML), 0);
+}
+
+
+
+//Summary:制作超链接，根据旧有的目录部分，和新添加的目录部分
+//Parameters:
+//		originalPart:旧有的目录部分
+//		newPart：新添加的目录部分
+//Return: 
+//		const char*：新的超链接
+const char* makeHyperLink(const char* originalPart, const char* newPart)
+{
+	return NULL;
+}
 
 
 
@@ -523,6 +582,11 @@ void sendRespondHead(int connectFd, int statusCode, const char* reasonPhrase, co
 }
 
 
+
+
+
+
+
 //Summary:发送响应报文的文件内容部分
 //Parameters:
 //		connectFd:某连接的句柄
@@ -539,7 +603,7 @@ void sendFile(int connectFd, const char* fileName)
 	{
 		printf("open failed\n");
 		sendError(connectFd, 404);
-		return;
+		return; 
 	}
 
 	char bufFile[BUF_LEN] = {0};
@@ -548,6 +612,8 @@ void sendFile(int connectFd, const char* fileName)
 	//循环读取文件内容，直到读完
 	while((numRead = Read(fileFd, bufFile, sizeof(bufFile))) > 0)
 	{
+		//printf("%d read\n", numRead);
+		
 		//发送读到的文件内容（采取分包发送的策略）
 		int numAlreadySend = 0;//已发送的数据量
 		int numSend = 0;//某次调用write所发数据量
@@ -555,8 +621,8 @@ void sendFile(int connectFd, const char* fileName)
 		//如果已发数据量<欲发数据量，说明数据仍未发完，需要继续发送
 		while(numAlreadySend < numRead)
 		{
-			//调用write，尝试发送一波数据
-			numSend = Write(connectFd, bufFile + numAlreadySend, numRead);
+			//调用write，尝试发送一波数据，以期将剩余数据发送出去
+			numSend = Write(connectFd, bufFile + numAlreadySend, numRead - numAlreadySend);
 
 			//调用write出错
 			if(numSend == -1)
@@ -565,7 +631,6 @@ void sendFile(int connectFd, const char* fileName)
 				perror("write failed");
 				int errorNo = errno;
 
-				
 				//write被信号中断，则重新调用write
 				if(errorNo == EINTR)
 					continue;
@@ -584,8 +649,8 @@ void sendFile(int connectFd, const char* fileName)
 				numAlreadySend += numSend;
 				numSendALL += numSend;
 
-				printf("%d sent        ", numSend);
-				printf("%d sent totolly now\n", numSendALL);
+				//printf("%d sent        ", numSend);
+				//printf("%d sent totolly now\n", numSendALL);
 
 				//如果已发数据量<欲发数据量，说明该次调用write，数据仍未发完，也就是说，写缓冲区暂时没有空位
 				//则先睡眠10ms，以期写缓冲区腾出空间
