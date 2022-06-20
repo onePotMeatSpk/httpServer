@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>

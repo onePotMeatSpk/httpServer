@@ -38,12 +38,13 @@ void disconnect(int connectFd, ReactorEvent* ev);
 void dealWithGETRequest(int connectFd, const char* fileName);
 void sendError(int connectFd, int errorNo);
 void sendDir(int connectFd, const char* dirName);
-const char* makeHyperLink(const char* originalPart, const char* newPart);
-
 void sendRespondHead(int connectFd, int statusCode, const char* reasonPhrase, const char* type, int len);
 void sendFile(int connectFd, const char* fileName);
 const char* getFileType(const char* fileName);
 const char* getReasonPhrase(int statusCode);
+int hexit(char c);
+void encodeStr(char* to, int tosize, const char* from);
+void decodeStr(char *to, char *from);
 
 
 
@@ -379,6 +380,8 @@ void recvMessageWork(int connectFd, int events, void* arg)
 	//正确读到http消息的第一行，则从其中，解析得到method、path、protocol
 	char method[16], path[256], protocol[16];
 	sscanf(line, "%[^ ] %[^ ] %[^ ]", method, path, protocol);
+	//utf-8 -> url，保证服务器可以得到正确的请求
+	decodeStr(path, path);
 	printf("method=%s, path=%s, protocol=%s\n", method, path, protocol);
 
 	//将该条http报文读完，以防止拥塞
@@ -397,10 +400,10 @@ void recvMessageWork(int connectFd, int events, void* arg)
 	{
 		//得到URL路径
 		const char* fileName;
-		//如果请求的是目录
+		//如果请求的是根目录
 		if(strcmp(path, "/") == 0)
 			fileName = ".";
-		//如果请求的是常规文件
+		//如果请求的不是根目录
 		else
 			fileName = path + 1;
 		
@@ -503,51 +506,71 @@ void sendError(int connectFd, int errorNo)
 //Return: void
 void sendDir(int connectFd, const char* dirName)
 {
-	//提取目录中的目录项信息
+	//提取本页目录中，的所有目录项信息，每个目录项都是一个子文件（或子文件夹）
 	struct dirent** direntList;
 	int numDirent = scandir(dirName, &direntList, NULL, alphasort);
 	
 	//制作报文体
 	char bufDirHTML[BUF_LEN] = {0};
 	sprintf(bufDirHTML + strlen(bufDirHTML), "<html>\n");
-	
 	sprintf(bufDirHTML + strlen(bufDirHTML), "<head>\n");
 	sprintf(bufDirHTML + strlen(bufDirHTML), "<title>%d %s</title>\n", 200, getReasonPhrase(200));
 	sprintf(bufDirHTML + strlen(bufDirHTML), "</head>\n");
 	
 	sprintf(bufDirHTML + strlen(bufDirHTML), "<body>\n");
 	sprintf(bufDirHTML + strlen(bufDirHTML), "<table width=\"500\">\n");
+	
+	//将该页的路径，进行utf-8 -> url转码，保证web端可以正确解析
+	char dirNameEncoded[1024] = {0};
+	encodeStr(dirNameEncoded, sizeof(dirNameEncoded), dirName);
+	
+	//附上首页的绝对路径，实现返回首页的功能
+	sprintf(bufDirHTML + strlen(bufDirHTML), "<tr><td><a href=\"/\">%s</a></td></tr>\n", "返回首页");
+	
+	//附上本页的绝对路径，实现刷新本页的功能
+	sprintf(bufDirHTML + strlen(bufDirHTML), "<tr><td><a href=\"/%s\">%s</a></td></tr>\n", dirNameEncoded, "刷新本页");
+	
+	//附上上页的绝对路径，实现返回上页的功能
+	//如果本页是首页，那自然没有上页，也就不需要上页链接了，否则需要上层链接
+	if(strcmp(dirNameEncoded, "."))
+	{
+		
+		//在本页路径中，从右往左找寻第一个'/'，'/'之前的部分，即为上页的路径
+		const char* partition = strrchr(dirNameEncoded, '/');
+
+		//如果本页路径中没有'/'，说明上页是首页，则不需要提取上页路径，直接附上首页路径即可
+		if(partition == NULL)
+			sprintf(bufDirHTML + strlen(bufDirHTML), "<tr><td><a href=\"/\">%s</a></td></tr>\n", "返回上页");
+		//否则，需要将上页路径提取出来
+		else
+		{
+			char upperLevelPath[1024] = {0};
+			strncpy(upperLevelPath, dirNameEncoded, partition - dirNameEncoded);
+			sprintf(bufDirHTML + strlen(bufDirHTML), "<tr><td><a href=\"/%s\">%s</a></td></tr>\n", upperLevelPath, "返回上页");
+		}
+	}
+
+	//附上子文件（或子文件夹）的绝对路径，实现浏览目录以及进入子文件（或子文件夹）的功能
 	for(int i = 0; i < numDirent; i++)
 	{
-		//制作超链接（此处并没有调用makeHyperLink）
+		//将该页子文件（或子文件夹）的路径，进行utf-8 -> url转码，保证web端可以正确解析
+		char newPartEncoded[1024] = {0};
+		encodeStr(newPartEncoded, sizeof(newPartEncoded), direntList[i]->d_name);
 		
 		//制作报文
-		sprintf(bufDirHTML + strlen(bufDirHTML), "<tr><td><a href=\"%s/%s\">%s</a></td></tr>\n", dirName, direntList[i]->d_name, direntList[i]->d_name);
+		if(strcmp(newPartEncoded, ".") && strcmp(newPartEncoded, ".."))
+			sprintf(bufDirHTML + strlen(bufDirHTML), "<tr><td><a href=\"/%s/%s\">%s</a></td></tr>\n", dirNameEncoded, newPartEncoded, direntList[i]->d_name);
 	}
+	sprintf(bufDirHTML + strlen(bufDirHTML), "</table>\n");
 	sprintf(bufDirHTML + strlen(bufDirHTML), "</body>\n");
-	
 	sprintf(bufDirHTML + strlen(bufDirHTML), "</html>\n");
 
 	//发送报文首部
-	sendRespondHead(connectFd, 200, getReasonPhrase(200), "text/html", strlen(bufDirHTML));
+	sendRespondHead(connectFd, 200, getReasonPhrase(200), "text/html; charset=utf-8", strlen(bufDirHTML));
 
 	//发送报文体
 	Send(connectFd, bufDirHTML, strlen(bufDirHTML), 0);
 }
-
-
-
-//Summary:制作超链接，根据旧有的目录部分，和新添加的目录部分
-//Parameters:
-//		originalPart:旧有的目录部分
-//		newPart：新添加的目录部分
-//Return: 
-//		const char*：新的超链接
-const char* makeHyperLink(const char* originalPart, const char* newPart)
-{
-	return NULL;
-}
-
 
 
 //Summary:发送HTTP响应报文的首部
@@ -594,7 +617,6 @@ void sendRespondHead(int connectFd, int statusCode, const char* reasonPhrase, co
 //Return: void
 void sendFile(int connectFd, const char* fileName)
 {
-	int numSendALL = 0;
 	//打开文件
 	int fileFd = open(fileName, O_RDONLY);
 
@@ -612,8 +634,6 @@ void sendFile(int connectFd, const char* fileName)
 	//循环读取文件内容，直到读完
 	while((numRead = Read(fileFd, bufFile, sizeof(bufFile))) > 0)
 	{
-		//printf("%d read\n", numRead);
-		
 		//发送读到的文件内容（采取分包发送的策略）
 		int numAlreadySend = 0;//已发送的数据量
 		int numSend = 0;//某次调用write所发数据量
@@ -647,10 +667,6 @@ void sendFile(int connectFd, const char* fileName)
 				
 				//更新已发数据量
 				numAlreadySend += numSend;
-				numSendALL += numSend;
-
-				//printf("%d sent        ", numSend);
-				//printf("%d sent totolly now\n", numSendALL);
 
 				//如果已发数据量<欲发数据量，说明该次调用write，数据仍未发完，也就是说，写缓冲区暂时没有空位
 				//则先睡眠10ms，以期写缓冲区腾出空间
@@ -662,7 +678,6 @@ void sendFile(int connectFd, const char* fileName)
 	}
 	
 locationExit:	
-	printf("%d sent totolly\n", numSendALL);
 	Close(fileFd);
 }
 
@@ -674,13 +689,15 @@ locationExit:
 const char* getFileType(const char* fileName)
 {
     // 自右向左查找‘.’字符, 如不存在返回NULL
-    const char* dot = strchr(fileName, '.');   
+    const char* dot = strrchr(fileName, '.');   
     if (dot == NULL)
         return "text/plain; charset=utf-8";
     if (strcmp(dot, ".html") == 0 || strcmp(dot, ".htm") == 0)
         return "text/html; charset=utf-8";
     if (strcmp(dot, ".jpg") == 0 || strcmp(dot, ".jpeg") == 0)
         return "image/jpeg";
+	if (strcmp(dot, ".pdf") == 0)
+        return "application/pdf";
     if (strcmp(dot, ".gif") == 0)
         return "image/gif";
     if (strcmp(dot, ".png") == 0)
@@ -847,4 +864,66 @@ const char* getReasonPhrase(int statusCode)
 			return "NMSL";
 	}
 }
+
+
+
+//Summary:将16进制数转化为10进制
+//Parameters:
+//		c：16进制数
+//Return: 10进制数
+int hexit(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+
+    return 0;
+}
+
+
+//Summary:编码，utf-8 -> url
+//Parameters:
+//		to：编码后的字符串
+//		tosize：编码后的字符串的长度
+//		from：编码前的字符串
+//Return: void
+void encodeStr(char* to, int tosize, const char* from)
+{
+    int tolen;
+
+    for (tolen = 0; *from != '\0' && tolen + 4 < tosize; ++from) {    
+        if (isalnum(*from) || strchr("/_.-~", *from) != (char*)0) {      
+            *to = *from;
+            ++to;
+            ++tolen;
+        } else {
+            sprintf(to, "%%%02x", (int) *from & 0xff);
+            to += 3;
+            tolen += 3;
+        }
+    }
+    *to = '\0';
+}
+
+//Summary:解码，  url -> utf-8
+//Parameters:
+//		to：解码后的字符串
+//		from：解码前的字符串
+//Return: void
+void decodeStr(char *to, char *from)
+{
+    for ( ; *from != '\0'; ++to, ++from  ) {     
+        if (from[0] == '%' && isxdigit(from[1]) && isxdigit(from[2])) {       
+            *to = hexit(from[1])*16 + hexit(from[2]);
+            from += 2;                      
+        } else {
+            *to = *from;
+        }
+    }
+    *to = '\0';
+}
+
 
