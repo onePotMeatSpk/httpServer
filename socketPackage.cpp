@@ -392,6 +392,141 @@ int Stat(const char *pathname, struct stat *buf)
 
 
 
+int Pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+	int ret = pthread_mutex_destroy(mutex);
+  	if(ret != 0)
+  	{
+    	perror("pthread_mutex_destroy() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+int Pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr)
+{
+	int ret = pthread_mutex_init(mutex, attr);
+  	if(ret != 0)
+  	{
+    	perror("pthread_mutex_init() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+
+int Pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+	int ret = pthread_mutex_lock(mutex);
+  	if(ret != 0)
+  	{
+    	perror("pthread_mutex_lock() failed");
+  	}
+  
+ 	return ret;
+}
+
+int Pthread_mutex_trylock(pthread_mutex_t *mutex)
+{
+	int ret = pthread_mutex_trylock(mutex);
+  	if(ret != 0)
+  	{
+    	perror("pthread_mutex_trylock() failed");
+  	}
+  
+ 	return ret;
+}
+int Pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+	int ret = pthread_mutex_unlock(mutex);
+  	if(ret != 0)
+  	{
+    	perror("pthread_mutex_unlock() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+
+
+int Pthread_cond_destroy(pthread_cond_t *cond)
+{
+	int ret = pthread_cond_destroy(cond);
+  	if(ret != 0)
+  	{
+    	perror("pthread_cond_destroy() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+int Pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr)
+{
+	int ret = pthread_cond_init(cond, attr);
+  	if(ret != 0)
+  	{
+    	perror("pthread_cond_init() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+
+int Pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex, const struct timespec *restrict abstime)
+{
+	int ret = pthread_cond_timedwait(cond, mutex, abstime);
+  	if(ret != 0)
+  	{
+    	perror("pthread_cond_timedwait() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+int Pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex)
+{
+	int ret = pthread_cond_wait(cond, mutex);
+  	if(ret != 0)
+  	{
+    	perror("pthread_cond_wait() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+int Pthread_cond_broadcast(pthread_cond_t *cond)
+{	
+	int ret = pthread_cond_broadcast(cond);
+  	if(ret != 0)
+  	{
+    	perror("pthread_cond_broadcast() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+int Pthread_cond_signal(pthread_cond_t *cond)
+{
+	int ret = pthread_cond_signal(cond);
+  	if(ret != 0)
+  	{
+    	perror("pthread_cond_signal() failed");
+  	}
+  
+ 	return ret;
+}
+
+
+
+
 
 
 

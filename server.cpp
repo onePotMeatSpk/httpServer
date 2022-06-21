@@ -59,31 +59,31 @@ void decodeStr(char *to, char *from);
 //Parameters:
 //       无参数
 //Return : 0.
-int main(int argc, char* argv[])
-{
-	//忽略SIGPIPE信号
-	//因为在服务器发送文件时的几次write的间隙之间，对端有可能close连接（我水平太低，想不通为什么对端会关闭连接，但他就是会）
-	//这样write就会出错，并发出SIGPIPE信号
-	//而SIGPIPE信号的默认处理方式，是kill掉当前进程！！！那么就会导致程序直接崩掉（血泪教训！！！）
-	//所以需要忽略SIGPIPE信号
-	signal(SIGPIPE, SIG_IGN);
-
-	//更改工作路径
-	int ret = chdir("../resource/");
-	if(ret == -1)
-	{
-		perror("chdir() failed");
-		exit(0);
-	}
-
-	//创建反应堆
-	epollFd = createReactor(REACTOR_SIZE);
-
-	//反应堆运行
-	runReactor();
-	
-	return 0;
-}
+//int main(int argc, char* argv[])
+//{
+//	//忽略SIGPIPE信号
+//	//因为在服务器发送文件时的几次write的间隙之间，对端有可能close连接（我水平太低，想不通为什么对端会关闭连接，但他就是会）
+//	//这样write就会出错，并发出SIGPIPE信号
+//	//而SIGPIPE信号的默认处理方式，是kill掉当前进程！！！那么就会导致程序直接崩掉（血泪教训！！！）
+//	//所以需要忽略SIGPIPE信号
+//	signal(SIGPIPE, SIG_IGN);
+//
+//	//更改工作路径
+//	int ret = chdir("../resource/");
+//	if(ret == -1)
+//	{
+//		perror("chdir() failed");
+//		exit(0);
+//	}
+//
+//	//创建反应堆
+//	epollFd = createReactor(REACTOR_SIZE);
+//
+//	//反应堆运行
+//	runReactor();
+//	
+//	return 0;
+//}
 
 
 //Summary:读取一行以\r\n结尾的数据
@@ -473,7 +473,8 @@ void dealWithGETRequest(int connectFd, const char* fileName)
 //		errorNo：错误号
 //Return: void
 void sendError(int connectFd, int errorNo)
-{
+{	
+	//版本1：发送文字风格的错误响应报文
 	//制作报文体
 	char bufErrorHTML[BUF_LEN] = {0};
 	sprintf(bufErrorHTML + strlen(bufErrorHTML), "<html>\n");
@@ -491,10 +492,16 @@ void sendError(int connectFd, int errorNo)
 
 
 	//发送错报文首部
-	sendRespondHead(connectFd, errorNo, getReasonPhrase(errorNo), "text/html", strlen(bufErrorHTML));
+	sendRespondHead(connectFd, errorNo, getReasonPhrase(errorNo), "text/html; charset=utf-8", strlen(bufErrorHTML));
 
 	//发送报文体
 	Send(connectFd, bufErrorHTML, strlen(bufErrorHTML), 0);
+
+//	//版本2：发送图片风格的错误响应报文
+//	struct stat stateFile;
+//	int ret = Stat("404.html", &stateFile);
+//	sendRespondHead(connectFd, errorNo, getReasonPhrase(errorNo), getFileType("404.html"), stateFile.st_size);
+//	sendFile(connectFd, "404.html");	
 }
 
 

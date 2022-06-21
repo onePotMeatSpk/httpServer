@@ -1,3 +1,6 @@
+#ifndef _SOCKETPACKAGE_
+#define _SOCKETPACKAGE_
+
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -21,8 +24,7 @@
 
 using namespace std;
 
-#ifndef _SOCKETPACKAGE_
-#define _SOCKETPACKAGE_
+
 
 
 
@@ -51,6 +53,22 @@ int Epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
 int Epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
 time_t Time(time_t *t);
 int Stat(const char *pathname, struct stat *buf);
+int Pthread_mutex_destroy(pthread_mutex_t *mutex);
+int Pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
+int Pthread_mutex_lock(pthread_mutex_t *mutex);
+int Pthread_mutex_trylock(pthread_mutex_t *mutex);
+int Pthread_mutex_unlock(pthread_mutex_t *mutex);
+int Pthread_cond_destroy(pthread_cond_t *cond);
+int Pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
+int Pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex, const struct timespec *restrict abstime);
+int Pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
+int Pthread_cond_broadcast(pthread_cond_t *cond);
+int Pthread_cond_signal(pthread_cond_t *cond);
+
+
+
+
+
 
 
 
