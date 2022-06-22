@@ -404,7 +404,7 @@ int Pthread_mutex_destroy(pthread_mutex_t *mutex)
 }
 
 
-int Pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr)
+int Pthread_mutex_init(pthread_mutex_t* mutex, const pthread_mutexattr_t* attr)
 {
 	int ret = pthread_mutex_init(mutex, attr);
   	if(ret != 0)
@@ -464,7 +464,7 @@ int Pthread_cond_destroy(pthread_cond_t *cond)
 }
 
 
-int Pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr)
+int Pthread_cond_init(pthread_cond_t* cond, const pthread_condattr_t* attr)
 {
 	int ret = pthread_cond_init(cond, attr);
   	if(ret != 0)
@@ -477,7 +477,7 @@ int Pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *r
 
 
 
-int Pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex, const struct timespec *restrict abstime)
+int Pthread_cond_timedwait(pthread_cond_t* cond, pthread_mutex_t* mutex, const struct timespec* abstime)
 {
 	int ret = pthread_cond_timedwait(cond, mutex, abstime);
   	if(ret != 0)
@@ -489,7 +489,7 @@ int Pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restr
 }
 
 
-int Pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex)
+int Pthread_cond_wait(pthread_cond_t* cond, pthread_mutex_t* mutex)
 {
 	int ret = pthread_cond_wait(cond, mutex);
   	if(ret != 0)

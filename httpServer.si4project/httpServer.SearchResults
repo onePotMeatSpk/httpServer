@@ -1,5 +1,27 @@
----- disconnect Matches (4 in 1 files) ----
-server.cpp line 35 : void disconnect(int connectFd, ReactorEvent* ev);
-recvMessageWork in server.cpp : 		printf("client has been closed, disconnect now\n");
-recvMessageWork in server.cpp : 		disconnect(connectFd, ev)
-server.cpp line 400 : void disconnect(int connectFd, ReactorEvent* ev)
+---- printf Matches (26 in 3 files) ----
+initReactor in server.cpp : 	printf("server created successfully, fd = %d, ip = %s\n", listenFd, inet_ntoa(addrServer.sin_addr));
+acceptConnectionWork in server.cpp : 		printf("connected failed, becuase epoll has been FULL\n");
+acceptConnectionWork in server.cpp : 		printf("connect succeed, fd = %d, ip = %s\n", connectFd, inet_ntoa(addrClient.sin_addr));
+recvMessageWork in server.cpp : 	printf("method=%s, path=%s, protocol=%s\n", method, path, protocol);
+disconnect in server.cpp : 	printf("DISCONNECT: %d\n", connectFd);
+sendRespondHead in server.cpp : 	printf("%s", bufRespondHead);
+sendFile in server.cpp : 		printf("open failed\n");
+Inet_pton in socketPackage.cpp :     printf("inet_pton() failed: A valid network address in the specified address family is not given.\n");
+threadPoolCreate in threadPool.cpp : 		printf("malloc for threadPool failed\n");
+threadPoolCreate in threadPool.cpp : 		printf("init for mutex and cond failed\n");
+threadPoolCreate in threadPool.cpp : 		printf("malloc for arrayThread failed\n");
+threadPoolCreate in threadPool.cpp : 		printf("malloc for arrayTask failed\n");
+threadPoolCreate in threadPool.cpp : 	printf("pthread pool created successfully\n");
+workFunction4WorkerThread in threadPool.cpp : 			printf("thread 0x%x is waiting\n", (unsigned int)pthread_self());
+workFunction4WorkerThread in threadPool.cpp : 					printf("thread 0x%x is exiting\n", (unsigned int)pthread_self());
+workFunction4WorkerThread in threadPool.cpp : 			printf("thread 0x%x is exiting\n", (unsigned int)pthread_self());
+workFunction4WorkerThread in threadPool.cpp : 		printf("thread 0x%x start working\n", (unsigned int)pthread_self());
+workFunction4WorkerThread in threadPool.cpp : 		printf("thread 0x%x end working\n", (unsigned int)pthread_self());		
+workFunction4AdministerThread in threadPool.cpp : 		printf("live thread : %d\n", threadPool->numLiveThread);
+workFunction4AdministerThread in threadPool.cpp : 		printf("busy thread : %d\n", threadPool->numBusyThread);
+workFunction4AdministerThread in threadPool.cpp : 		printf("wait task : %d\n", threadPool->numTask);
+workFunction4AdministerThread in threadPool.cpp : 				printf("thread 0x%x created successfully\n", (threadPool->arrayThread)[i]);
+workFunction4AdministerThread in threadPool.cpp : 			printf("administer thread unlock\n");
+workFunction4AdministerThread in threadPool.cpp : 			printf("administer thread unlock\n");
+workFunction4AdministerThread in threadPool.cpp : 			printf("administer thread unlock\n");
+callBackFunctionTest in threadPool.cpp : 	printf("AAA %ld\n", argument);
