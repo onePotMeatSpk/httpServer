@@ -1,3 +1,8 @@
+//Copyright:一锅肉spk
+//Author: 一锅肉spk
+//Date:2022-06-23
+//Description:对网络编程中用到的一些库函数和系统调用进行浅封装，并声明一些常用到的基础函数
+
 #ifndef _SOCKETPACKAGE_
 #define _SOCKETPACKAGE_
 
@@ -64,14 +69,9 @@ int Pthread_cond_timedwait(pthread_cond_t* cond, pthread_mutex_t* mutex, const s
 int Pthread_cond_wait(pthread_cond_t* cond, pthread_mutex_t* mutex);
 int Pthread_cond_broadcast(pthread_cond_t *cond);
 int Pthread_cond_signal(pthread_cond_t *cond);
-
-
-
-
-
-
-
-
-
+int getLine(int fd, char *buf, int size);
+int hexit(char c);
+void encodeStr(char* to, int tosize, const char* from);
+void decodeStr(char *to, char *from);
 
 #endif
